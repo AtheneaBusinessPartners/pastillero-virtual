@@ -1,0 +1,17 @@
+{
+  "name": "Mis Pastillas",
+  "short_name": "Mis Pastillas",
+  "description": "Recordatorio de medicación para personas mayores",
+  "start_url": "/paciente",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
