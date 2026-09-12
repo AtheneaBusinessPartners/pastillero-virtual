@@ -5,9 +5,9 @@ import MedicationForm from "@/components/medication-form";
 export default async function EditMedicationPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ householdId: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { householdId, id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,9 +17,10 @@ export default async function EditMedicationPage({
   const { data: household } = await supabase
     .from("households")
     .select("id")
+    .eq("id", householdId)
     .eq("created_by", user.id)
     .single();
-  if (!household) redirect("/dashboard");
+  if (!household) notFound();
 
   const { data: medication } = await supabase
     .from("medications")

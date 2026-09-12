@@ -184,7 +184,7 @@ export default function MedicationForm({
       return;
     }
 
-    router.push("/dashboard");
+    router.push(`/dashboard/${householdId}`);
     router.refresh();
   }
 

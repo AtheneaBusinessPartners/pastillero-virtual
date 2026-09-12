@@ -1,8 +1,13 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import MedicationForm from "@/components/medication-form";
 
-export default async function NewMedicationPage() {
+export default async function NewMedicationPage({
+  params,
+}: {
+  params: Promise<{ householdId: string }>;
+}) {
+  const { householdId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -12,10 +17,10 @@ export default async function NewMedicationPage() {
   const { data: household } = await supabase
     .from("households")
     .select("id")
+    .eq("id", householdId)
     .eq("created_by", user.id)
     .single();
-
-  if (!household) redirect("/dashboard");
+  if (!household) notFound();
 
   return (
     <div>

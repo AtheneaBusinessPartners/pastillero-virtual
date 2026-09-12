@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { getNowInTimezone } from "@/lib/time";
 import { computeMonthlyHistory } from "@/lib/history";
 
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
+  const householdId = request.nextUrl.searchParams.get("householdId");
   const year = parseInt(request.nextUrl.searchParams.get("year") ?? "", 10);
-  const month = parseInt(request.nextUrl.searchParams.get("month") ?? "", 10); // 1-12
+  const month = parseInt(request.nextUrl.searchParams.get("month") ?? "", 10);
 
-  if (!code || !year || !month) {
+  if (!householdId || !year || !month) {
     return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
   }
 
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  // RLS ya restringe esto al dueño, pero comprobamos para devolver un 404 claro.
   const { data: household } = await supabase
     .from("households")
     .select("id, timezone")
-    .eq("access_code", code.trim())
+    .eq("id", householdId)
+    .eq("created_by", user.id)
     .single();
 
   if (!household) {
-    return NextResponse.json({ error: "Código no encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Hogar no encontrado" }, { status: 404 });
   }
 
   const { date: today } = getNowInTimezone(household.timezone);

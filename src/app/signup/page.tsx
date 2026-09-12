@@ -34,19 +34,23 @@ export default function SignupPage() {
       return;
     }
 
-    const { error: householdError } = await supabase.from("households").insert({
-      name: householdName || "Mi hogar",
-      access_code: randomAccessCode(),
-      created_by: data.user.id,
-    });
+    const { data: household, error: householdError } = await supabase
+      .from("households")
+      .insert({
+        name: householdName || "Mi hogar",
+        access_code: randomAccessCode(),
+        created_by: data.user.id,
+      })
+      .select()
+      .single();
 
-    if (householdError) {
-      setError(householdError.message);
+    if (householdError || !household) {
+      setError(householdError?.message ?? "No se pudo crear el hogar.");
       setLoading(false);
       return;
     }
 
-    router.push("/dashboard");
+    router.push(`/dashboard/${household.id}`);
     router.refresh();
   }
 

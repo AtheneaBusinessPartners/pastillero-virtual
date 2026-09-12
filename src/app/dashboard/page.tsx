@@ -1,105 +1,104 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DAY_LABELS, type Medication, type Schedule } from "@/lib/types";
-import DeleteMedicationButton from "./delete-medication-button";
+import { getNowInTimezone } from "@/lib/time";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-export default async function DashboardPage() {
+type ScheduleRow = { id: string; days_of_week: number[] };
+
+async function getTodaySummary(
+  supabase: SupabaseClient,
+  householdId: string,
+  timezone: string
+) {
+  const { date: today, dayOfWeek } = getNowInTimezone(timezone);
+
+  const { data: medications } = await supabase
+    .from("medications")
+    .select("schedules(id, days_of_week)")
+    .eq("household_id", householdId)
+    .eq("active", true);
+
+  const scheduleIds = (medications ?? []).flatMap((m) =>
+    ((m.schedules ?? []) as ScheduleRow[])
+      .filter((s) => s.days_of_week.includes(dayOfWeek))
+      .map((s) => s.id)
+  );
+
+  if (scheduleIds.length === 0) return { total: 0, taken: 0 };
+
+  const { data: logs } = await supabase
+    .from("intake_logs")
+    .select("status")
+    .in("schedule_id", scheduleIds)
+    .eq("scheduled_date", today)
+    .eq("status", "taken");
+
+  return { total: scheduleIds.length, taken: logs?.length ?? 0 };
+}
+
+export default async function HouseholdsPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: household } = await supabase
+  const { data: households } = await supabase
     .from("households")
-    .select("id")
+    .select("*")
     .eq("created_by", user.id)
-    .single();
-
-  const { data: medications } = await supabase
-    .from("medications")
-    .select("*, schedules(*)")
-    .eq("household_id", household?.id ?? "")
     .order("created_at", { ascending: true });
 
-  const meds = (medications ?? []) as (Medication & { schedules: Schedule[] })[];
+  const summaries = await Promise.all(
+    (households ?? []).map((h) => getTodaySummary(supabase, h.id, h.timezone))
+  );
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Medicamentos</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Mis abuelos</h1>
         <Link
-          href="/dashboard/nueva"
+          href="/dashboard/nuevo-hogar"
           className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
         >
-          + Añadir pastilla
+          + Añadir otro
         </Link>
       </div>
 
-      {meds.length === 0 && (
+      {(!households || households.length === 0) && (
         <p className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-slate-500">
-          Todavía no has añadido ningún medicamento.
+          Todavía no has creado ningún perfil.
         </p>
       )}
 
       <div className="flex flex-col gap-4">
-        {meds.map((med) => (
-          <div
-            key={med.id}
-            className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+        {households?.map((h, i) => (
+          <Link
+            key={h.id}
+            href={`/dashboard/${h.id}`}
+            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm hover:border-blue-300"
           >
-            {med.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={med.photo_url}
-                alt={med.name}
-                className="h-20 w-20 flex-shrink-0 rounded-lg object-cover"
-              />
-            ) : (
-              <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-3xl">
-                💊
-              </div>
-            )}
-
-            <div className="flex-1">
-              <div className="flex items-start justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">{med.name}</h2>
-                <div className="flex gap-3">
-                  <Link
-                    href={`/dashboard/${med.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Editar
-                  </Link>
-                  <DeleteMedicationButton medicationId={med.id} />
-                </div>
-              </div>
-              <p className="text-sm text-slate-500">
-                {[med.color, med.shape].filter(Boolean).join(" · ") || "Sin detalles"}
-              </p>
-              {med.notes && <p className="mt-1 text-sm text-slate-600">{med.notes}</p>}
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {med.schedules
-                  ?.sort((a, b) => a.time_of_day.localeCompare(b.time_of_day))
-                  .map((s) => (
-                    <span
-                      key={s.id}
-                      className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
-                    >
-                      {s.time_of_day} ·{" "}
-                      {s.days_of_week.length === 7
-                        ? "Todos los días"
-                        : s.days_of_week.map((d) => DAY_LABELS[d]).join(", ")}
-                    </span>
-                  ))}
-                {(!med.schedules || med.schedules.length === 0) && (
-                  <span className="text-xs text-amber-600">Sin horario configurado</span>
-                )}
-              </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">{h.name}</h2>
+              <p className="text-sm text-slate-500">Código: {h.access_code}</p>
             </div>
-          </div>
+            <div className="text-right">
+              {summaries[i].total > 0 ? (
+                <span
+                  className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                    summaries[i].taken === summaries[i].total
+                      ? "bg-green-100 text-green-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {summaries[i].taken}/{summaries[i].total} hoy
+                </span>
+              ) : (
+                <span className="text-sm text-slate-400">Sin pastillas hoy</span>
+              )}
+            </div>
+          </Link>
         ))}
       </div>
     </div>
