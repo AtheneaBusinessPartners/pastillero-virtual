@@ -42,6 +42,13 @@ export default function MedicationForm({
   const [color, setColor] = useState(medication?.color ?? "");
   const [shape, setShape] = useState(medication?.shape ?? "");
   const [notes, setNotes] = useState(medication?.notes ?? "");
+  const [trackStock, setTrackStock] = useState(medication?.stock_quantity != null);
+  const [stockQuantity, setStockQuantity] = useState(
+    medication?.stock_quantity != null ? String(medication.stock_quantity) : ""
+  );
+  const [lowStockThreshold, setLowStockThreshold] = useState(
+    String(medication?.low_stock_threshold ?? 5)
+  );
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(medication?.photo_url ?? null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
@@ -139,6 +146,8 @@ export default function MedicationForm({
       shape: shape || null,
       notes: notes || null,
       photo_url: photoUrl,
+      stock_quantity: trackStock && stockQuantity !== "" ? parseInt(stockQuantity, 10) : null,
+      low_stock_threshold: parseInt(lowStockThreshold, 10) || 5,
     };
 
     let medicationId = medication?.id;
@@ -291,6 +300,48 @@ export default function MedicationForm({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
+      </div>
+
+      <div className="rounded-lg border border-slate-200 p-4">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={trackStock}
+            onChange={(e) => setTrackStock(e.target.checked)}
+            className="h-4 w-4"
+          />
+          Controlar stock (solo lo ves tú, no el familiar)
+        </label>
+
+        {trackStock && (
+          <div className="mt-3 grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Unidades disponibles
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(e.target.value)}
+                placeholder="Ej. 30"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Avisar cuando queden
+              </label>
+              <input
+                type="number"
+                min={1}
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 focus:border-blue-500 focus:outline-none"
+                value={lowStockThreshold}
+                onChange={(e) => setLowStockThreshold(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div>

@@ -188,6 +188,18 @@ export default function PacientePage() {
         </button>
       </div>
 
+      {doses.length > 0 && (
+        <div
+          className={`mb-6 rounded-xl px-5 py-4 text-center text-xl font-bold ${
+            doses.every((d) => d.status === "taken")
+              ? "bg-green-100 text-green-800"
+              : "bg-blue-100 text-blue-800"
+          }`}
+        >
+          {doses.filter((d) => d.status === "taken").length} de {doses.length} tomadas hoy
+        </div>
+      )}
+
       <Link
         href="/paciente/historial"
         className="mb-6 flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-slate-50"

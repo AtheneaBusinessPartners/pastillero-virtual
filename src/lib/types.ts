@@ -16,6 +16,8 @@ export type Medication = {
   notes: string | null;
   photo_url: string | null;
   active: boolean;
+  stock_quantity: number | null;
+  low_stock_threshold: number;
   created_at: string;
 };
 

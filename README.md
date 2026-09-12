@@ -15,6 +15,9 @@ Stack: **Next.js (App Router) + Supabase (auth, base de datos, storage) + Vercel
    [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) → **Run**.
    Esto crea las tablas, la seguridad a nivel de fila (RLS) y el bucket de storage para
    las fotos.
+   Después haz lo mismo con [`supabase/migrations/0002_stock.sql`](supabase/migrations/0002_stock.sql)
+   (añade el control de stock por medicamento). Cada vez que añada una migración nueva,
+   ejecútala igual, en orden.
 3. Ve a **Project Settings → API** y copia:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`

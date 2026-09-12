@@ -39,12 +39,20 @@ export async function POST(request: NextRequest) {
   }
 
   const { date: today } = getNowInTimezone(household.timezone);
+  const newStatus = status === "skipped" ? "skipped" : "taken";
+
+  const { data: existingLog } = await supabase
+    .from("intake_logs")
+    .select("status")
+    .eq("schedule_id", schedule_id)
+    .eq("scheduled_date", today)
+    .maybeSingle();
 
   const { error } = await supabase.from("intake_logs").upsert(
     {
       schedule_id,
       scheduled_date: today,
-      status: status === "skipped" ? "skipped" : "taken",
+      status: newStatus,
       taken_at: new Date().toISOString(),
     },
     { onConflict: "schedule_id,scheduled_date" }
@@ -52,6 +60,22 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Descuenta una unidad de stock solo la primera vez que se marca como tomada.
+  if (newStatus === "taken" && existingLog?.status !== "taken") {
+    const { data: medication } = await supabase
+      .from("medications")
+      .select("stock_quantity")
+      .eq("id", schedule.medication_id)
+      .single();
+
+    if (medication?.stock_quantity != null && medication.stock_quantity > 0) {
+      await supabase
+        .from("medications")
+        .update({ stock_quantity: medication.stock_quantity - 1 })
+        .eq("id", schedule.medication_id);
+    }
   }
 
   return NextResponse.json({ ok: true });

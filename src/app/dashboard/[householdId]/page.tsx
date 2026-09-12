@@ -42,6 +42,17 @@ export default async function MedicationsPage({
     .in("schedule_id", scheduleIds.length > 0 ? scheduleIds : ["00000000-0000-0000-0000-000000000000"])
     .eq("scheduled_date", today);
 
+  let todayTotal = 0;
+  let todayTaken = 0;
+  for (const med of meds) {
+    for (const s of med.schedules ?? []) {
+      if (s.days_of_week.includes(dayOfWeek)) {
+        todayTotal++;
+        if (logs?.find((l) => l.schedule_id === s.id)?.status === "taken") todayTaken++;
+      }
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -53,6 +64,16 @@ export default async function MedicationsPage({
           + Añadir pastilla
         </Link>
       </div>
+
+      {todayTotal > 0 && (
+        <div
+          className={`mb-6 rounded-xl px-5 py-3 text-sm font-semibold ${
+            todayTaken === todayTotal ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"
+          }`}
+        >
+          Hoy: {todayTaken} de {todayTotal} tomadas
+        </div>
+      )}
 
       {meds.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 px-6 py-10 text-center text-slate-500">
@@ -96,6 +117,17 @@ export default async function MedicationsPage({
                 {[med.color, med.shape].filter(Boolean).join(" · ") || "Sin detalles"}
               </p>
               {med.notes && <p className="mt-1 text-sm text-slate-600">{med.notes}</p>}
+              {med.stock_quantity != null && (
+                <p
+                  className={`mt-1 text-sm font-semibold ${
+                    med.stock_quantity <= med.low_stock_threshold ? "text-red-600" : "text-slate-500"
+                  }`}
+                >
+                  {med.stock_quantity <= med.low_stock_threshold ? "⚠️ " : ""}
+                  Quedan {med.stock_quantity} unidades
+                  {med.stock_quantity <= med.low_stock_threshold ? " · ¡se están acabando!" : ""}
+                </p>
+              )}
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {med.schedules
