@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DAY_LABELS, type Medication, type Schedule } from "@/lib/types";
@@ -44,6 +44,8 @@ export default function MedicationForm({
   const [notes, setNotes] = useState(medication?.notes ?? "");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(medication?.photo_url ?? null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [schedules, setSchedules] = useState<ScheduleDraft[]>(
     initialSchedules?.map((s) => ({
       id: s.id,
@@ -58,7 +60,15 @@ export default function MedicationForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setPhotoFile(file);
+    setPhotoRemoved(false);
     setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  function handleRemovePhoto() {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setPhotoRemoved(true);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function addSchedule() {
@@ -104,7 +114,7 @@ export default function MedicationForm({
     setSaving(true);
     const supabase = createClient();
 
-    let photoUrl = medication?.photo_url ?? null;
+    let photoUrl = photoRemoved ? null : medication?.photo_url ?? null;
     if (photoFile) {
       const ext = photoFile.name.split(".").pop();
       const path = `${householdId}/${crypto.randomUUID()}.${ext}`;
@@ -229,15 +239,46 @@ export default function MedicationForm({
         <label className="mb-1 block text-sm font-medium text-slate-700">
           Foto de la pastilla o del pastillero
         </label>
-        <input type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} />
-        {photoPreview && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoPreview}
-            alt="Vista previa"
-            className="mt-3 h-32 w-32 rounded-lg object-cover"
-          />
-        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handlePhotoChange}
+          className="hidden"
+        />
+        <div className="flex items-center gap-4">
+          {photoPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={photoPreview}
+              alt="Vista previa"
+              className="h-24 w-24 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-slate-100 text-3xl">
+              💊
+            </div>
+          )}
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded-lg border-2 border-blue-600 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              {photoPreview ? "Cambiar foto" : "Añadir foto"}
+            </button>
+            {photoPreview && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                className="text-sm font-medium text-red-600 hover:underline"
+              >
+                Quitar foto
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>

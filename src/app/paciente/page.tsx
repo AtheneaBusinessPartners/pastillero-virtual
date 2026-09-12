@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { startAlarmSound, stopAlarmSound } from "@/lib/alarm-sound";
 import { subscribeToPush } from "@/lib/push-client";
 
@@ -186,6 +187,13 @@ export default function PacientePage() {
           Cambiar código
         </button>
       </div>
+
+      <Link
+        href="/paciente/historial"
+        className="mb-6 flex items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-lg font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        📅 Ver historial de días anteriores
+      </Link>
 
       {!pushEnabled && (
         <button
