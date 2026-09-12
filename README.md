@@ -61,15 +61,23 @@ git push -u origin main
 
 ### Sobre el cron de avisos
 
-El archivo `vercel.json` define un cron que llama a `/api/cron/reminders` **cada
-minuto** para comprobar qué pastillas tocan ahora y enviar la notificación push. En el
-plan gratuito (Hobby) de Vercel los cron jobs pueden tener restricciones de frecuencia
-mínima. Si al desplegar Vercel no acepta `* * * * *`, dos alternativas:
+El endpoint `/api/cron/reminders` es el que revisa cada minuto qué pastillas tocan
+ahora y envía la notificación push. **El plan gratuito (Hobby) de Vercel solo permite
+cron jobs una vez al día**, así que no podemos usar el cron nativo de Vercel para esto
+(por eso no hay `vercel.json` con un cron configurado — si lo hubiera, el deploy
+fallaría).
 
-- Sube al plan Pro (permite cualquier frecuencia), o
-- Usa un servicio externo gratuito como [cron-job.org](https://cron-job.org) que llame
-  cada minuto a `https://TU-APP.vercel.app/api/cron/reminders` con el header
-  `Authorization: Bearer TU_CRON_SECRET`.
+En su lugar, usa un servicio externo gratuito como [cron-job.org](https://cron-job.org):
+
+1. Crea una cuenta gratuita.
+2. Crea un nuevo "Cronjob" que llame cada minuto a
+   `https://TU-APP.vercel.app/api/cron/reminders`.
+3. En "Advanced" añade un header personalizado:
+   `Authorization: Bearer TU_CRON_SECRET` (el valor de tu variable `CRON_SECRET`).
+4. Guarda y actívalo.
+
+Si en el futuro subes al plan Pro de Vercel, puedes volver a usar un cron nativo
+añadiendo un `vercel.json` con `{"crons": [{"path": "/api/cron/reminders", "schedule": "* * * * *"}]}`.
 
 ## 5. Cómo se usa
 
